@@ -1,0 +1,53 @@
+name: Build and Deploy
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        push: true
+        tags: 0xsaju/mysql-deployment-test:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install ArgoCD CLI
+      run: |
+        curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+        chmod +x argocd
+        sudo mv argocd /usr/local/bin/
+
+    - name: Setup Kubeconfig
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > $HOME/.kube/config
+
+    - name: Deploy using ArgoCD
+      env:
+        ARGOCD_SERVER: ${{ secrets.PRIVATE_IP }}:${{ secrets.ARGOCD_PORT }}
+        ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+      run: |
+        argocd login $ARGOCD_SERVER --insecure --username admin --password ${{ secrets.ARGOCD_PASSWORD }}
+        argocd app create flask-app \
+          --repo https://github.com/0xsaju/mysql-deployment-test.git \
+          --path charts/flask-app \
+          --dest-server https://kubernetes.default.svc \
+          --dest-namespace mysql \
+          --helm-set image.tag=${{ github.sha }} \
+          --upsert

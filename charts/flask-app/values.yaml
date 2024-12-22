@@ -1,0 +1,27 @@
+image:
+  repository: 0xsaju/mysql-deployment-test
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: NodePort  # Changed to NodePort for k3s access
+  port: 80
+  targetPort: 5000
+  nodePort: 30000  # Added for external access
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "200m"
+
+mysql:
+  host: mysql.mysql.svc.cluster.local
+  database: myapp_db
+  user: myapp_user
+  secretName: mysql
+  secretKey: mysql-password
+  password: mysecretpassword  # Should be overridden in production
+  rootPassword: myrootpassword  # Should be overridden in production
