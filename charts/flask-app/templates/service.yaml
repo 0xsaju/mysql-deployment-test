@@ -13,5 +13,9 @@ spec:
     - port: {{ .Values.service.port }}
       targetPort: {{ .Values.service.targetPort }}
       nodePort: {{ .Values.service.nodePort }}
+      name: http
+    - port: 5000
+      targetPort: 5000
+      name: pod-port
   selector:
     app: {{ .Release.Name }}
