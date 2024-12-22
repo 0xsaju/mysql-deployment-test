@@ -22,32 +22,18 @@ jobs:
         push: true
         tags: 0xsaju/mysql-deployment-test:${{ github.sha }}
 
-  deploy:
+  sync-application:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Install ArgoCD CLI
-      run: |
-        curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-        chmod +x argocd
-        sudo mv argocd /usr/local/bin/
-
-    - name: Setup Kubeconfig
-      run: |
-        echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > $HOME/.kube/config
-
-    - name: Deploy using ArgoCD
+    - name: Trigger ArgoCD Sync
       env:
-        ARGOCD_SERVER: ${{ secrets.PRIVATE_IP }}:${{ secrets.ARGOCD_PORT }}
-        ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+        ARGOCD_SERVER: localhost:8080
+        ARGOCD_AUTH_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJhcmdvY2QiLCJzdWIiOiJhZG1pbjphcGlLZXkiLCJuYmYiOjE3MzQ4NzA1MDQsImlhdCI6MTczNDg3MDUwNCwianRpIjoiZWM5YmY0M2UtNTQ4Yy00MWIyLWFkOWEtZjdlNDEyYTg0NzRlIn0.L4rUrGVP5rOugdoldYYZhdCY4t3MJZkphk17ig3zh4U
       run: |
-        argocd login $ARGOCD_SERVER --insecure --username admin --password ${{ secrets.ARGOCD_PASSWORD }}
-        argocd app create flask-app \
-          --repo https://github.com/0xsaju/mysql-deployment-test.git \
-          --path charts/flask-app \
-          --dest-server https://kubernetes.default.svc \
-          --dest-namespace mysql \
-          --helm-set image.tag=${{ github.sha }} \
-          --upsert
+        curl -sSL -o /dev/null -w "%{http_code}" \
+          -H "Authorization: Bearer $ARGOCD_AUTH_TOKEN" \
+          -H "Content-Type: application/json" \
+          --insecure \
+          -X POST \
+          https://$ARGOCD_SERVER/api/v1/applications/flask-app/sync

@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flask-app
+  namespace: argocd        # ArgoCD application should be in argocd namespace
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/0xsaju/mysql-deployment-test.git
+    targetRevision: HEAD
+    path: charts/flask-app
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: flask-app   # Your application will be deployed in flask-app namespace
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
