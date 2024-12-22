@@ -21,7 +21,7 @@ mysql:
   host: mysql.mysql.svc.cluster.local
   database: myapp_db
   user: myapp_user
+  password: mysecretpassword
   secretName: mysql
   secretKey: mysql-password
-  password: mysecretpassword  # Should be overridden in production
   rootPassword: myrootpassword  # Should be overridden in production

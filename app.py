@@ -30,9 +30,9 @@ def health():
 def init_db():
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)  # Return results as dictionary
         
-        # Create a test table
+        logger.info("Creating test_table if not exists")
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS test_table (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -40,27 +40,40 @@ def init_db():
             )
         ''')
         
-        # Insert a test record
+        logger.info("Inserting test record")
         cursor.execute('INSERT INTO test_table (message) VALUES (%s)', ('Test message',))
         conn.commit()
         
-        # Read the inserted record
+        logger.info("Verifying inserted record")
         cursor.execute('SELECT * FROM test_table ORDER BY id DESC LIMIT 1')
         result = cursor.fetchone()
         
         cursor.close()
         conn.close()
         
+        if result:
+            logger.info(f"Successfully created and inserted data: {result}")
+            return jsonify({
+                "status": "success",
+                "message": "Database initialized and tested",
+                "data": result
+            }), 200
+        else:
+            logger.error("No data returned after insert")
+            return jsonify({
+                "status": "error",
+                "message": "Failed to verify inserted data"
+            }), 500
+            
+    except mysql.connector.Error as e:
+        logger.error(f"MySQL Error: {e}")
         return jsonify({
-            "status": "success",
-            "message": "Database initialized and tested",
-            "data": {
-                "id": result[0],
-                "message": result[1]
-            }
-        }), 200
+            "status": "error",
+            "message": str(e),
+            "error_code": e.errno if hasattr(e, 'errno') else None
+        }), 500
     except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
+        logger.error(f"Unexpected error: {e}")
         return jsonify({
             "status": "error",
             "message": str(e)
